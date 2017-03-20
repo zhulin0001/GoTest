@@ -8,6 +8,25 @@ import (
 )
 
 func main() {
+
+	c := make(chan int, 2)
+
+	go func(chan int) {
+		for {
+			print(<-c)
+		}
+	}(c)
+
+	go func(chan int) {
+		for index := 0; index < 6; index++ {
+			c <- index
+		}
+	}(c)
+
+	for {
+	}
+	return
+
 	service := "127.0.0.1:7777"
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
 	if checkError(err) {
