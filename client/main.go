@@ -35,11 +35,11 @@ func main() {
 }
 
 func checkError(err error, info string) (ret bool) {
+	ret = false
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Fatal error[%s]: %s", info, err.Error())
 		ret = true
 	}
-	ret = false
 	return
 }
 
@@ -57,6 +57,7 @@ func chatSend(conn net.Conn) {
 	for {
 
 		fmt.Scanln(&input)
+		println("Read: " + input)
 		if input == "/quit" {
 			fmt.Println("ByeBye..")
 			conn.Close()

@@ -15,7 +15,7 @@ func main() {
 	}
 	listener, err := net.ListenTCP("tcp", tcpAddr)
 	if checkError(err) {
-		os.Exit(1)
+		os.Exit(3)
 	}
 	conns := make(map[string]net.Conn)
 	messages := make(chan string, 10)
@@ -32,11 +32,11 @@ func main() {
 }
 
 func checkError(err error) (ret bool) {
+	ret = false
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Fatal error: %s", err)
 		ret = true
 	}
-	ret = false
 	return
 }
 
@@ -61,6 +61,7 @@ func echoHandler(conns *map[string]net.Conn, messages chan string) {
 				if err != nil {
 					fmt.Println(err.Error())
 					delete(*conns, key)
+					return
 				}
 			}
 		}
@@ -82,14 +83,14 @@ func Handler(conn net.Conn, messages chan string) {
 	buf := make([]byte, 1024)
 	for {
 		lenght, err := conn.Read(buf)
-		if checkError(err) == false {
+		if checkError(err) == true {
 			conn.Close()
 			break
 		}
 		if lenght > 0 {
 			buf[lenght] = 0
 		}
-		//fmt.Println("Rec[",conn.RemoteAddr().String(),"] Say :" ,string(buf[0:lenght]))
+		fmt.Println("Rec[", conn.RemoteAddr().String(), "] Say :", string(buf[0:lenght]))
 		reciveStr := string(buf[0:lenght])
 		messages <- reciveStr
 	}
