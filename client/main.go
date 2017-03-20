@@ -99,8 +99,8 @@ func chatSend(conn net.Conn) {
 			os.Exit(0)
 		}
 
-		lens, err := conn.Write([]byte(username + " Say :::" + input))
-		fmt.Println("Write Len: " + string(lens))
+		_, err := conn.Write([]byte(username + " Say :::" + input))
+		//fmt.Println("Write Len: " + string(lens))
 		if err != nil {
 			fmt.Println("send " + err.Error())
 			conn.Close()

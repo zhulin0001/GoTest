@@ -17,17 +17,22 @@ func main() {
 	if checkError(err) {
 		os.Exit(3)
 	}
-	conns := make(map[string]net.Conn)
+	conns := make(map[string]chan string)
 	messages := make(chan string, 10000)
-	//启动服务器广播线程
-	go echoHandler(&conns, messages)
+	addrs := make(chan string, 10000)
+	// //启动服务器广播线程
+	// go echoHandler(&conns, messages)
+	go readMsg(messages, addrs, &conns)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			continue
 		}
-		conns[conn.RemoteAddr().String()] = conn
-		go Handler(conn, messages)
+		msg := make(chan string)
+		conns[conn.RemoteAddr().String()] = msg
+		fmt.Println("connection is connected from ...", conn.RemoteAddr().String())
+		go clientRead(conn, messages, addrs)
+		go clientWrite(conn, msg, addrs)
 	}
 }
 
@@ -38,6 +43,50 @@ func checkError(err error) (ret bool) {
 		ret = true
 	}
 	return
+}
+
+func clientRead(conn net.Conn, messages chan string, addrs chan string) {
+	buf := make([]byte, 1024)
+	for {
+		lenght, err := conn.Read(buf)
+		if checkError(err) {
+			addrs <- conn.RemoteAddr().String()
+			conn.Close()
+			break
+		}
+		if lenght > 0 {
+			buf[lenght] = 0
+		}
+		reciveStr := string(buf[0:lenght])
+		fmt.Println("Rec[" + conn.RemoteAddr().String() + "] Say : " + reciveStr)
+		messages <- reciveStr
+	}
+}
+
+func clientWrite(conn net.Conn, messages chan string, addrs chan string) {
+	for {
+		msg := <-messages
+		_, err := conn.Write([]byte(msg))
+		if checkError(err) {
+			addrs <- conn.RemoteAddr().String()
+			conn.Close()
+			break
+		}
+	}
+}
+
+func readMsg(messages chan string, addrs chan string, conns *map[string]chan string) {
+	for {
+		select {
+		case str := <-messages:
+			for _, value := range *conns {
+				value <- str
+			}
+		case addr := <-addrs:
+			delete(*conns, addr)
+			fmt.Println("remove " + addr)
+		}
+	}
 }
 
 ////////////////////////////////////////////////////////
