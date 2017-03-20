@@ -8,25 +8,6 @@ import (
 )
 
 func main() {
-
-	c := make(chan int, 2)
-
-	go func(chan int) {
-		for {
-			print(<-c)
-		}
-	}(c)
-
-	go func(chan int) {
-		for index := 0; index < 6; index++ {
-			c <- index
-		}
-	}(c)
-
-	for {
-	}
-	return
-
 	service := "127.0.0.1:7777"
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
 	if checkError(err) {
@@ -37,7 +18,7 @@ func main() {
 		os.Exit(3)
 	}
 	conns := make(map[string]net.Conn)
-	messages := make(chan string, 10)
+	messages := make(chan string, 10000)
 	//启动服务器广播线程
 	go echoHandler(&conns, messages)
 	for {

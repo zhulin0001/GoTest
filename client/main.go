@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -13,6 +15,39 @@ func main() {
 	if checkError(err, "Resolve") {
 		os.Exit(1)
 	}
+	if len(os.Args) == 2 {
+		count, err := strconv.Atoi(os.Args[1])
+		checkError(err, "main")
+		for index := 0; index < count; index++ {
+			go startBotClient(tcpAddr)
+		}
+		for {
+			time.Sleep(100000)
+		}
+	} else {
+		startClient(tcpAddr)
+	}
+}
+
+func startBotClient(tcpAddr *net.TCPAddr) {
+	conn, err := net.DialTCP("tcp", nil, tcpAddr)
+	if checkError(err, "Dial") {
+		os.Exit(3)
+	}
+	//开始客户端轮训
+	buf := make([]byte, 1024)
+	for {
+		len, err := conn.Read(buf)
+		if checkError(err, "read") {
+			if strings.EqualFold(err.Error(), "EOF") {
+				continue
+			}
+		}
+		fmt.Println(string(buf[0:len]))
+	}
+}
+
+func startClient(tcpAddr *net.TCPAddr) {
 	conn, err := net.DialTCP("tcp", nil, tcpAddr)
 	if checkError(err, "Dial") {
 		os.Exit(3)
