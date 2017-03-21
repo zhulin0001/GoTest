@@ -1,0 +1,15 @@
+title = "Server Config File"
+#convert tool: https://xuri.me/toml-to-go/
+
+[owner]
+name = "Julin"
+Email = "zhulin_jay@163.com"
+
+[server]
+listen_ip = "127.0.0.1"
+port = 10086
+port_internal = 10087
+#允许同时多少个客户端连接
+max_client = 3000
+#单个客户端的channel缓冲大小
+max_channel_buf = 10
