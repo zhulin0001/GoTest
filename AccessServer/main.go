@@ -38,14 +38,17 @@ func main() {
 		os.Exit(0)
 	}
 	//创建客户端读写channe
-	channelBufNum := conf.Server.MaxClient * conf.Server.MaxChannelBuf
+	channelBufNum := conf.Server.MaxChannelBuf
 	crc := make(chan []byte, channelBufNum)
 	cwc := make(chan []byte, channelBufNum)
 
 	serverAddrForClients := conf.Server.ListenIP + ":" + strconv.Itoa(conf.Server.Port)
 	startListenForClients(serverAddrForClients, crc, cwc)
+
+	src := make(chan []byte, 10)
+	swc := make(chan []byte, 10)
 	serverAddrForServers := conf.Server.ListenIP + ":" + strconv.Itoa(conf.Server.PortInternal)
-	startListenForServers(serverAddrForServers, crc, cwc)
+	startListenForServers(serverAddrForServers, src, swc)
 }
 
 func startListenForClients(addr string, rc chan []byte, wc chan []byte) {
