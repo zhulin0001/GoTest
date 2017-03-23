@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	service := "127.0.0.1:7777"
+	service := "127.0.0.1:10086"
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
 	if checkError(err, "Resolve") {
 		os.Exit(1)

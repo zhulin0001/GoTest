@@ -7,11 +7,9 @@ import (
 )
 
 func main() {
-	header := new(common.NetPacketHeader)
-	header.MainCmd = 106
-	header.SubCmd = 2
-	header.BodyLen = 3
-	header.Encrypt = 1
+	headerBuf := make([]byte, common.NetPacketHeaderSize())
+	headerBuf[0] = 'a'
+	header := common.NewNetPacketHeader(headerBuf)
 
 	body := []byte("hello")
 

@@ -10,6 +10,6 @@ listen_ip = "127.0.0.1"
 port = 10086
 port_internal = 10087
 #允许同时多少个客户端连接
-max_client = 3000
+max_client = 30
 #客户端和AC之间channel缓冲大小
-max_channel_buf = 1000
+max_channel_buf = 10

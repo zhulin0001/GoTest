@@ -11,6 +11,8 @@ import (
 
 	"strconv"
 
+	"runtime"
+
 	"github.com/BurntSushi/toml"
 	log "github.com/sirupsen/logrus"
 )
@@ -20,11 +22,37 @@ func init() {
 }
 
 func main() {
-	var configFileName = "config.toml"
+	conf := readConfig()
+	if conf == nil {
+		log.Error("Read Config Failed!")
+		os.Exit(1)
+	}
+	//创建客户端读写channe
+	channelBufNum := conf.Server.MaxChannelBuf
+	cMsgQueue := make(chan *common.PacketWrapper, channelBufNum)
+	cConnList := make([]*common.ConnHandler, conf.Server.MaxClient)
+	fmt.Printf("Cap[%d], Len[%d]\n", cap(cConnList), len(cConnList))
+
+	go dispatchMsg(cMsgQueue)
+	serverAddrForClients := conf.Server.ListenIP + ":" + strconv.Itoa(conf.Server.Port)
+	go startListen(serverAddrForClients, cMsgQueue, cConnList)
+
+	// sMsgQueue := make(chan []byte, 10)
+	// swc := make(chan []byte, 10)
+	// sConnList := make([]common.ConnHandler, conf.Server.MaxClient)
+	// serverAddrForServers := conf.Server.ListenIP + ":" + strconv.Itoa(conf.Server.PortInternal)
+	// go startListen(serverAddrForServers, sMsgQueue, &sConnList)
+
+	for {
+		runtime.Gosched()
+	}
+}
+
+func readConfig() (cfg *config.ACConfig) {
+	var configFileName = "../config.toml"
 	if len(os.Args) > 1 {
 		configFileName = os.Args[1]
 	}
-	var conf = new(config.ACConfig)
 	var confData []byte
 	if utils.CheckFileIsExist(configFileName) {
 		var err error
@@ -32,52 +60,31 @@ func main() {
 		if utils.CheckError(err, "ReadFile") {
 			log.Info("Read File[%s] Error: ", configFileName, err.Error())
 		}
-		//fmt.Println("文件存在")
-		//fmt.Println(confData)
 	} else {
 		fmt.Println("文件不存在")
 	}
+	var conf = new(config.ACConfig)
 	err := toml.Unmarshal(confData, conf)
 	if utils.CheckError(err, "toml.Decode") {
 		log.Info("toml decode error: " + err.Error())
-		os.Exit(0)
+	} else {
+		cfg = conf
 	}
-	//创建客户端读写channe
-	channelBufNum := conf.Server.MaxChannelBuf
-	crc := make(chan []byte, channelBufNum)
-	cwc := make(chan []byte, channelBufNum)
-
-	serverAddrForClients := conf.Server.ListenIP + ":" + strconv.Itoa(conf.Server.Port)
-	go startListenForClients(serverAddrForClients, crc, cwc)
-
-	src := make(chan []byte, 10)
-	swc := make(chan []byte, 10)
-	serverAddrForServers := conf.Server.ListenIP + ":" + strconv.Itoa(conf.Server.PortInternal)
-	startListenForServers(serverAddrForServers, src, swc)
+	return cfg
 }
 
-func startListenForClients(addr string, rc chan []byte, wc chan []byte) {
-	tcpAddr, err := net.ResolveTCPAddr("tcp4", addr)
-	if utils.CheckError(err, "Resolve") {
-		os.Exit(1)
-	}
-	listener, err := net.ListenTCP("tcp4", tcpAddr)
-	defer listener.Close()
-	if utils.CheckError(err, "Listen") {
-		os.Exit(1)
-	}
-	log.Info("Server Listening On ", tcpAddr)
-
+func dispatchMsg(mq chan *common.PacketWrapper) {
 	for {
-		conn, err := listener.Accept()
-		if utils.CheckError(err, "OnListen") {
-			log.Error("Socket Error On Accept: ", err.Error())
+		select {
+		case msg := <-mq:
+			conn := msg.RawCon
+			packet := msg.Packet
+			fmt.Println("Dispatch: ", conn.RemoteAddr(), packet.Bytes())
 		}
-		log.Info("connection is connected from ...", conn.RemoteAddr().String())
 	}
 }
 
-func startListenForServers(addr string, rc chan []byte, wc chan []byte) {
+func startListen(addr string, rc chan *common.PacketWrapper, hl []*common.ConnHandler) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", addr)
 	if utils.CheckError(err, "Resolve") {
 		os.Exit(1)
@@ -98,9 +105,10 @@ func startListenForServers(addr string, rc chan []byte, wc chan []byte) {
 		connHandle := new(common.ConnHandler)
 		connHandle.RawCon = conn
 		connHandle.ErrChan = make(chan *common.InternalChannelMsg)
-		connHandle.ReadChan = make(chan *common.NetPacket)
+		connHandle.ReadChan = rc
 		connHandle.WriteChan = make(chan *common.NetPacket)
 		connHandle.CloseChan = make(chan bool)
+		hl = append(hl, connHandle)
 
 		go connReadLoop(connHandle)
 		go connWriteLoop(connHandle)
@@ -128,15 +136,18 @@ func connReadLoop(handler *common.ConnHandler) {
 				handler.CloseChan <- true
 				break
 			}
-			bodyData := make([]byte, header.BodyLen)
-			_, err = conn.Read(bodyData)
-			if utils.CheckError(err, "ReadLoop") {
-				log.Info("Read PacketBody Error: ", err.Error())
-				handler.CloseChan <- true
-				break
+			bodyData := make([]byte, header.BodyLen) //考虑长度为0
+			if header.BodyLen > 0 {
+				_, err = conn.Read(bodyData)
+				if utils.CheckError(err, "ReadLoop") {
+					log.Info("Read PacketBody Error: ", err.Error())
+					handler.CloseChan <- true
+					break
+				}
 			}
 			packet := &common.NetPacket{Header: header, Body: bodyData}
-			handler.ReadChan <- packet
+			pWrapper := &common.PacketWrapper{RawCon: handler.RawCon, Packet: packet}
+			handler.ReadChan <- pWrapper
 		}
 	}
 }

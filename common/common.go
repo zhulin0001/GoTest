@@ -57,6 +57,12 @@ func (p *NetPacket) Bytes() []byte {
 	return bytes.Join(buf, []byte(""))
 }
 
+//PacketWrapper for internal use
+type PacketWrapper struct {
+	RawCon net.Conn
+	Packet *NetPacket
+}
+
 //InternalChannelMsg use for Service know what error occurs and stop self
 type InternalChannelMsg struct {
 	Code     int32
@@ -73,7 +79,7 @@ func (p *InternalChannelMsg) String() string {
 type ConnHandler struct {
 	RawCon    net.Conn
 	ErrChan   chan *InternalChannelMsg
-	ReadChan  chan *NetPacket
+	ReadChan  chan *PacketWrapper
 	WriteChan chan *NetPacket
 	CloseChan chan bool
 }
