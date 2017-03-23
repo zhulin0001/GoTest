@@ -49,7 +49,7 @@ func main() {
 }
 
 func readConfig() (cfg *config.ACConfig) {
-	var configFileName = "../config.toml"
+	var configFileName = "config.toml"
 	if len(os.Args) > 1 {
 		configFileName = os.Args[1]
 	}
@@ -79,7 +79,7 @@ func dispatchMsg(mq chan *common.PacketWrapper) {
 		case msg := <-mq:
 			conn := msg.RawCon
 			packet := msg.Packet
-			fmt.Println("Dispatch: ", conn.RemoteAddr(), packet.Bytes())
+			log.Info("Dispatch: ", conn.RemoteAddr(), packet.Bytes())
 		}
 	}
 }
@@ -100,8 +100,9 @@ func startListen(addr string, rc chan *common.PacketWrapper, hl []*common.ConnHa
 		conn, err := listener.Accept()
 		if utils.CheckError(err, "OnListen") {
 			log.Error("Socket Error On Accept: ", err.Error())
+			break
 		}
-		log.Info("connection is connected from ...", conn.RemoteAddr().String())
+		log.Info("connection is connected from ...", conn.RemoteAddr())
 		connHandle := new(common.ConnHandler)
 		connHandle.RawCon = conn
 		connHandle.ErrChan = make(chan *common.InternalChannelMsg)
