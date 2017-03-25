@@ -13,6 +13,8 @@ func main() {
 
 	body := []byte("hello")
 
+	fmt.Printf("hello %X\n", body)
+
 	p := &common.NetPacket{Header: header, Body: body}
 	fmt.Println(header.Bytes())
 	fmt.Printf("%x\n", p.Bytes())

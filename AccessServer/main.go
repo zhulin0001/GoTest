@@ -124,30 +124,6 @@ func connReadLoop(handler *common.ConnHandler) {
 			log.Warn("Recive Error: ", errChan.String())
 			handler.CloseChan <- true
 		default:
-			headerBuf := make([]byte, common.NetPacketHeaderSize())
-			_, err := conn.Read(headerBuf)
-			if utils.CheckError(err, "ReadLoop") {
-				log.Info("Read Header Error: ", err.Error())
-				handler.CloseChan <- true
-				break
-			}
-			header := common.NewNetPacketHeader(headerBuf)
-			if header == nil {
-				log.Warn("Read Invalid Header: ", headerBuf)
-				handler.CloseChan <- true
-				break
-			}
-			bodyData := make([]byte, header.BodyLen) //考虑长度为0
-			if header.BodyLen > 0 {
-				_, err = conn.Read(bodyData)
-				if utils.CheckError(err, "ReadLoop") {
-					log.Info("Read PacketBody Error: ", err.Error())
-					handler.CloseChan <- true
-					break
-				}
-			}
-			packet := &common.NetPacket{Header: header, Body: bodyData}
-			pWrapper := &common.PacketWrapper{RawCon: handler.RawCon, Packet: packet}
 			handler.ReadChan <- pWrapper
 		}
 	}

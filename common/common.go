@@ -7,7 +7,7 @@ import (
 	"net"
 )
 
-//NetPacketHeader: MainCmd, SubCmd, BodyLen, Encrypt
+//NetPacketHeader  MainCmd, SubCmd, BodyLen, Encrypt
 type NetPacketHeader struct {
 	MainCmd uint16
 	SubCmd  uint16
@@ -63,6 +63,43 @@ type PacketWrapper struct {
 	Packet *NetPacket
 }
 
+//PacketParser 包解析器
+type PacketParser interface {
+	Decode(net.Conn) (*PacketWrapper, error)
+}
+
+// ClientPacketParser defines a special parser for client
+type ClientPacketParser struct{}
+
+//Decode for ClientPacketParser
+func (parser ClientPacketParser) Decode(conn net.Conn) (p *PacketWrapper, err error) {
+	headerBuf := make([]byte, NetPacketHeaderSize())
+	for {
+		_, err = conn.Read(headerBuf)
+		if err != nil {
+			err = fmt.Errorf("Read Header Error: %s", err.Error())
+			break
+		}
+		header := NewNetPacketHeader(headerBuf)
+		if header == nil {
+			err = fmt.Errorf("Read Invalid Header: %X", headerBuf)
+			break
+		}
+		bodyData := make([]byte, header.BodyLen) //考虑长度为0
+		if header.BodyLen > 0 {
+			_, err = conn.Read(bodyData)
+			if err != nil {
+				err = fmt.Errorf("Read PacketBody Error: %s", err.Error())
+				break
+			}
+		}
+		packet := &NetPacket{Header: header, Body: bodyData}
+		p = &PacketWrapper{RawCon: conn, Packet: packet}
+		break
+	}
+	return
+}
+
 //InternalChannelMsg use for Service know what error occurs and stop self
 type InternalChannelMsg struct {
 	Code     int32
@@ -82,6 +119,7 @@ type ConnHandler struct {
 	ReadChan  chan *PacketWrapper
 	WriteChan chan *NetPacket
 	CloseChan chan bool
+	Parser    PacketParser
 }
 
 func (h *ConnHandler) start(conn net.Conn) {
