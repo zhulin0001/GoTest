@@ -1,21 +1,21 @@
 package main
 
 import (
-	"common"
 	"encoding/binary"
 	"fmt"
+	"network"
 )
 
 func main() {
-	headerBuf := make([]byte, common.NetPacketHeaderSize())
+	headerBuf := make([]byte, network.PacketClientHeaderSize())
 	headerBuf[0] = 'a'
-	header := common.NewNetPacketHeader(headerBuf)
+	header := network.NewPacketClientHeader(headerBuf)
 
 	body := []byte("hello")
 
 	fmt.Printf("hello %X\n", body)
 
-	p := &common.NetPacket{Header: header, Body: body}
+	p := &network.PacketClient{Header: header, Body: body}
 	fmt.Println(header.Bytes())
 	fmt.Printf("%x\n", p.Bytes())
 

@@ -1,11 +1,11 @@
 package main
 
 import (
-	"common"
 	"config"
 	"fmt"
 	"io/ioutil"
 	"net"
+	"network"
 	"os"
 	"utils"
 
@@ -29,8 +29,8 @@ func main() {
 	}
 	//创建客户端读写channe
 	channelBufNum := conf.Server.MaxChannelBuf
-	cMsgQueue := make(chan *common.PacketWrapper, channelBufNum)
-	cConnList := make([]*common.ConnHandler, conf.Server.MaxClient)
+	cMsgQueue := make(chan *network.PacketWrapper, channelBufNum)
+	cConnList := make([]*network.ConnHandler, conf.Server.MaxClient)
 	fmt.Printf("Cap[%d], Len[%d]\n", cap(cConnList), len(cConnList))
 
 	go dispatchMsg(cMsgQueue)
@@ -73,7 +73,7 @@ func readConfig() (cfg *config.ACConfig) {
 	return cfg
 }
 
-func dispatchMsg(mq chan *common.PacketWrapper) {
+func dispatchMsg(mq chan *network.PacketWrapper) {
 	for {
 		select {
 		case msg := <-mq:
@@ -84,7 +84,7 @@ func dispatchMsg(mq chan *common.PacketWrapper) {
 	}
 }
 
-func startListen(addr string, rc chan *common.PacketWrapper, hl []*common.ConnHandler) {
+func startListen(addr string, rc chan *network.PacketWrapper, hl []*network.ConnHandler) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", addr)
 	if utils.CheckError(err, "Resolve") {
 		os.Exit(1)
@@ -103,11 +103,11 @@ func startListen(addr string, rc chan *common.PacketWrapper, hl []*common.ConnHa
 			break
 		}
 		log.Info("connection is connected from ...", conn.RemoteAddr())
-		connHandle := new(common.ConnHandler)
+		connHandle := new(network.ConnHandler)
 		connHandle.RawCon = conn
-		connHandle.ErrChan = make(chan *common.InternalChannelMsg)
+		connHandle.ErrChan = make(chan *network.InternalChannelMsg)
 		connHandle.ReadChan = rc
-		connHandle.WriteChan = make(chan *common.NetPacket)
+		connHandle.WriteChan = make(chan *network.PacketClient)
 		connHandle.CloseChan = make(chan bool)
 		hl = append(hl, connHandle)
 
@@ -116,7 +116,7 @@ func startListen(addr string, rc chan *common.PacketWrapper, hl []*common.ConnHa
 	}
 }
 
-func connReadLoop(handler *common.ConnHandler) {
+func connReadLoop(handler *network.ConnHandler) {
 	var conn = handler.RawCon
 	for {
 		select {
@@ -124,12 +124,16 @@ func connReadLoop(handler *common.ConnHandler) {
 			log.Warn("Recive Error: ", errChan.String())
 			handler.CloseChan <- true
 		default:
+			pWrapper, err := handler.Parser.Decode(conn)
+			if utils.CheckError(err, "Parse Packet") {
+				handler.CloseChan <- true
+			}
 			handler.ReadChan <- pWrapper
 		}
 	}
 }
 
-func connWriteLoop(handler *common.ConnHandler) {
+func connWriteLoop(handler *network.ConnHandler) {
 	var conn = handler.RawCon
 	for {
 		select {
