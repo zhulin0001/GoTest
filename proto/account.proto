@@ -1,0 +1,37 @@
+syntax = "proto2";
+package network.cmd;
+
+message PBUserInfo{
+	required string 	uid 	=	1;	//用户id
+	required string 	name	=	2;	//用户姓名
+	required string 	icon 	=	3;	//用户头像url
+	required int64		mmoney	=	4;	//用户金币
+	required int32		status 	=	5;	//账号状态
+}
+
+message PBReqAccountLogin{
+	required int32		sid		=	1;	//账号登陆平台
+	required int32		api 	=	2; 	//客户端id
+	required int32		type 	=	3;	//登陆类型
+	optional string 	platuid	=	4;	//手机号、第三方登陆uid
+	optional string 	token 	=	5;	//密码、第三方token
+	optional int32		lang	=	6;	//客户端默认语言
+	optional int64		time 	=	7;	//消息时间戳
+}
+
+message PBRespAccountLogin{
+	required int32		code	=	1;	//结果码
+	optional int64		time 	=	2;	//消息时间戳
+	optional PBUserInfo user 	=	3;	//用户信息
+}
+
+message PBReqAccountInfoExt{
+	required string 	name	=	1;
+	optional int64		time 	=	2;
+	optional int32		gender	=	3;	//性别
+}
+
+message PBRespAccountInfoExt{
+	required int32		code	=	1;
+	optional PBUserInfo user 	=	2;
+}

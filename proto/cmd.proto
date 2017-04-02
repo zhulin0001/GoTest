@@ -1,0 +1,19 @@
+syntax = "proto2";
+package network.cmd;
+
+enum PBMainCmd{
+	MCmd_HeartBeat			=	0x0000;		//用于心跳
+	MCmd_Account			=	0x0001;		//用于账号相关
+}
+
+enum PBMainCmdHearBeatSubCmd{
+	HB_Send					=	0x0001;
+	HB_Response				=	0x0002;
+}
+
+enum PBMainCmdAccountSubCmd{
+	Account_ReqLogin		=	0x0001;
+	Account_RespLogin		=	0x0002;
+	Account_ReqInfoExt		=	0x0003;
+	Account_RespInfoExt		=	0x0004;
+}

@@ -17,6 +17,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// net.Conn.RemoteAddr() => true/false
+var connMap = make(map[string]bool)
+
 func init() {
 	log.SetLevel(log.DebugLevel)
 }
@@ -79,7 +82,14 @@ func dispatchMsg(mq chan *network.PacketWrapper) {
 		case msg := <-mq:
 			conn := msg.RawCon
 			packet := msg.Packet
-			log.Info("Dispatch: ", conn.RemoteAddr(), packet.Bytes())
+			remoteAddr := conn.RemoteAddr().String()
+			if v, ok := connMap[remoteAddr]; ok {
+				//未认证过的
+				if !v {
+					packet.Header.MainCmd
+				}
+			}
+			log.Info("Dispatch: ", remoteAddr, packet.Bytes())
 		}
 	}
 }
@@ -102,6 +112,14 @@ func startListen(addr string, rc chan *network.PacketWrapper, hl []*network.Conn
 			log.Error("Socket Error On Accept: ", err.Error())
 			break
 		}
+		remoteAddr := conn.RemoteAddr().String()
+
+		if _, ok := connMap[remoteAddr]; ok {
+			log.Info(remoteAddr, " Reconnect")
+		}
+		//所有新监听的连接都置为不受信任
+		connMap[remoteAddr] = false
+
 		log.Info("connection is connected from ...", conn.RemoteAddr())
 		connHandle := new(network.ConnHandler)
 		connHandle.RawCon = conn
