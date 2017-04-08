@@ -6,7 +6,7 @@ import (
 	"network"
 )
 
-func main() {
+func main1() {
 	headerBuf := make([]byte, network.PacketClientHeaderSize())
 	headerBuf[0] = 'a'
 	header := network.NewPacketClientHeader(headerBuf)
@@ -26,4 +26,8 @@ func main() {
 	fmt.Println(test)
 	binary.LittleEndian.PutUint16(test, 2)
 	fmt.Println(test)
+}
+
+func main() {
+	Depushe()
 }
